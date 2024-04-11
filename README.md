@@ -2,7 +2,15 @@
 Garden watering automation system via arduino.
 
 ## How to use?
-### 1. Implement the hardware
+### 1. Hardware
+#### Required Hardwares:
+- Arduino Uno
+- Sim800L
+- Twin Relay module
+- Adapter (220V AC to 5V DC)
+- LM2596S Module
+- Dirt humidity sensor
+
 #### 1.1. Grab a CH340 Arduino Uno board
 #### 1.2. Connecting the humidity sensor to A0 pin
 #### 1.3. Configuring and connecting the Sim800L module to the project.
