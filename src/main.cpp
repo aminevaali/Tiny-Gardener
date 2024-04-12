@@ -7,6 +7,7 @@
 
 #define SECOND 1000
 #define MINUTE 60000
+#define RESET_TIME_DELAY 30 * SECOND
 
 #define VALVE1 5
 #define VALVE2 6
@@ -445,8 +446,7 @@ void resetGsm()
   digitalWrite(gsmResetPin, LOW);
   delay(1000);
   digitalWrite(gsmResetPin, HIGH);
-  //todo 30 * SECOND
-  delay(3 * SECOND);
+  delay(RESET_TIME_DELAY);
 
   sim800.print("AT+CMGF=1\r"); // SMS text mode
   delay(1000);
