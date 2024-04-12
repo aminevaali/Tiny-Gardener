@@ -7,39 +7,34 @@
 
 #define SECOND 1000
 #define MINUTE 60000
-auto timer = timer_create_default();
 
-
-//------------------------sms codes-------------------------
-#define TOTAL_PHONE_NUMS 3
-#define PHONE_NUM_LENGTH 13
-char phoneNumbers[TOTAL_PHONE_NUMS][PHONE_NUM_LENGTH + 1];
-//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-
-//GSM Module RX pin to Arduino 2
-//GSM Module TX pin to Arduino 3
-#define rxPin 3
-#define txPin 2
-#define gsmResetPin 4
-SoftwareSerial sim800(rxPin,txPin);
-
-//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-String smsStatus,senderNumber,receivedDate,msg;
-//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-
-//------------------------watering codes-------------------------
 #define VALVE1 5
 #define VALVE2 6
 #define DIRT_HUMIDITY_PIN A1
-unsigned short dryCounter = 0;
 #define DRYCOUNTERLIMIT 7
 
+#define rxPin 3 // Arduino rx = pin3 ==> connected to tx pin of GSM module
+#define txPin 2 // Arduino tx = pin2 ==> connected to rx pin of GSM module
+#define gsmResetPin 4 // connected to rst pin of GSM module
+
+#define TOTAL_PHONE_NUMS 3
+#define PHONE_NUM_LENGTH 13
+
+
+//#### watering state variables ####
+unsigned short dryCounter = 0;
 const unsigned long wateringTime1 = 20UL * MINUTE; // 0.5 hour by milliseconds
 const unsigned long wateringTime2 = 25UL * MINUTE;
 const int HUMIDITY_TO_WATERING = 768; // 750% dryness = 20% humidity
-
 bool automaticWatering = true;
 bool chainValves = true;
+//#### end watering state variables ####
+
+char phoneNumbers[TOTAL_PHONE_NUMS][PHONE_NUM_LENGTH + 1]; // This variable saves allowed phone numbers which is read from EEPROM
+SoftwareSerial sim800(rxPin,txPin); // sim800 variable is used to interact with sim800 module
+auto timer = timer_create_default(); // making timer object via arduino-timer library to schedule tasks
+String smsStatus = "",senderNumber = "",receivedDate = "",msg = ""; // variables to save the strings fetched from sim800 module
+
 
 // #### function prototypes ####
 void afterWatering1(void *args);
@@ -66,32 +61,23 @@ void resetGsm();
  ******************************************************************************/
 void setup() {
 
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-  Serial.begin(9600);
-  Serial.println("Arduino serial initialize");
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-  wateringSetup();
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+  Serial.begin(9600); // Arduino SoftwareSerial initialization
+  sim800.begin(9600); // Sim800 SoftwareSerial initialization
+  Serial.println("Tiny Gardener Initializing...");
 
-  pinMode(gsmResetPin, OUTPUT);
-  digitalWrite(gsmResetPin, HIGH);
-  sim800.begin(9600);
-  Serial.println("SIM800L software serial initialize");
+  wateringSetup(); // determining pinModes of valves and soil humidity sensor
+  pinMode(gsmResetPin, OUTPUT); // determining gsmResetPin as output
+  digitalWrite(gsmResetPin, HIGH); // disabling reset pin by making it HIGH value (it's active-low)
 
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-  smsStatus = "";
-  senderNumber="";
-  receivedDate="";
-  msg="";
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+  //#### Reading allowed phone numbers from EEPROM ####
   Serial.println("List of Registered Phone Numbers");
   for (int i = 0; i < TOTAL_PHONE_NUMS; i++){
     readPhoneNumsFromEEPROM(i * 13, phoneNumbers[i]);
     Serial.println(phoneNumbers[i]);
   }
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-  resetGsm();
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+  //#### End Reading allowed phone numbers from EEPROM ####
+
+  resetGsm(); // Reseting the GSM module everytime that Arduino turns on
 }
 
 
@@ -113,15 +99,13 @@ void loop() {
     openValve1();
   }
 
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
   while(sim800.available()){
     parseData(sim800.readString());
   }
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+
   while(Serial.available())  {
     sim800.println(Serial.readString());
   }
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 
 } //main loop ends
 
@@ -144,6 +128,10 @@ inline void afterWatering2(void *args){
   closeValve2();
 }
 
+/****
+ * wateringSetup function
+ * determining pinModes of valves and soil humidity sensor
+****/
 void wateringSetup(){
   pinMode(VALVE1, OUTPUT);
   pinMode(VALVE2, OUTPUT);
@@ -186,12 +174,11 @@ void parseData(String buff){
   }
 
   unsigned int len, index;
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+
   //Remove sent "AT Command" from the response string.
   index = buff.indexOf("\r");
   buff.remove(0, index+2);
   buff.trim();
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
   
   if(buff != "OK"){
     index = buff.indexOf(":");
@@ -226,12 +213,10 @@ void parseData(String buff){
     }
     // else if(cmd == "+CMGR"){
     // }
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
   }
   else{
   //The result of AT Command is "OK"
   }
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 }
 
 /*******************************************************************************
@@ -287,7 +272,6 @@ void extractSmsCMGR(String buff){
  * Performs action according to the received sms
  ******************************************************************************/
 void doAction(String phoneNumber){
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
   if(msg == "callme"){
     sim800.println("ATD" + phoneNumber + ";");
   }else if(msg == "ping"){
@@ -315,7 +299,7 @@ void doAction(String phoneNumber){
     automaticWatering = !automaticWatering;
     Reply(automaticWatering?"aut on":"aut off", phoneNumber);
   }
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+
   smsStatus = "";
   senderNumber="";
   receivedDate="";
@@ -405,9 +389,8 @@ void resetGsm(){
   digitalWrite(gsmResetPin, LOW);
   delay(1000);
   digitalWrite(gsmResetPin, HIGH);
-
-   //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
   delay(30 * SECOND);
+
   sim800.print("AT+CMGF=1\r"); //SMS text mode
   delay(1000);
   //delete all sms
@@ -416,5 +399,4 @@ void resetGsm(){
   sim800.println("AT+CMGDA= \"DEL ALL\"");
   delay(1000);
   Reply("Gsm reseted successfully", phoneNumbers[0]);
-  //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 }
