@@ -19,7 +19,7 @@
 
 #define TOTAL_PHONE_NUMS 3
 #define PHONE_NUM_LENGTH 13
-#define MESSAGE_STRING_MAX_LEN 10
+#define MESSAGE_STRING_MAX_LEN 40
 
 // #### watering state variables ####
 unsigned short dryCounter = 0;
