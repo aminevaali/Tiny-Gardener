@@ -14,7 +14,6 @@ shouldComment = input()
 source = open("src/main.cpp", "r")
 destination = open("src/tmp.cpp", "w")
 lines = source.readlines()
-serialPrintPattern = re.compile(r"\s*Serial.print")
 
 if shouldComment == "c":
     for line in lines:
