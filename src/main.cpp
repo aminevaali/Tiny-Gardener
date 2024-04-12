@@ -11,8 +11,9 @@ auto timer = timer_create_default();
 
 
 //------------------------sms codes-------------------------
-#define totalPhoneNo 3
-String phoneNo[totalPhoneNo] = {"","",""};
+#define TOTAL_PHONE_NUMS 3
+#define PHONE_NUM_LENGTH 13
+char phoneNumbers[TOTAL_PHONE_NUMS][PHONE_NUM_LENGTH + 1];
 //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 
 //GSM Module RX pin to Arduino 2
@@ -54,8 +55,8 @@ void extractSmsCMGR(String buff);
 void doAction(String phoneNumber);
 void Reply(String text, String Phone);
 void sendStatus(String Phone);
-String readFromEEPROM(int addrOffset);
-boolean comparePhone(String number);
+void readFromEEPROM(int addrOffset, char outputPhoneNo[PHONE_NUM_LENGTH + 1]);
+boolean comparePhone(const char *number);
 void resetGsm();
 // #### end of function prototypes ####
 
@@ -84,9 +85,9 @@ void setup() {
   msg="";
   //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
   Serial.println("List of Registered Phone Numbers");
-  for (int i = 0; i < totalPhoneNo; i++){
-    phoneNo[i] = readFromEEPROM(i * 13);
-    Serial.println(phoneNo[i]);
+  for (int i = 0; i < TOTAL_PHONE_NUMS; i++){
+    readFromEEPROM(i * 13, phoneNumbers[i]);
+    Serial.println(phoneNumbers[i]);
   }
   //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
   resetGsm();
@@ -129,13 +130,13 @@ void afterWatering1(void *args){
   closeValve1();
   if(chainValves){
     openValve2();
-    Reply("v2 opnd aftr v1", phoneNo[0]);
+    Reply("v2 opnd aftr v1", phoneNumbers[0]);
   }
 
   int humidity = analogRead(DIRT_HUMIDITY_PIN);
   if(humidity >= HUMIDITY_TO_WATERING){
     automaticWatering = false;
-    Reply("snsr sspndd. err", phoneNo[0]);
+    Reply("snsr sspndd. err", phoneNumbers[0]);
   }
 }
 
@@ -213,7 +214,7 @@ void parseData(String buff){
       else //if(cmd == "+CMGR")
         extractSmsCMGR(buff);
       //----------------------------------------------------------------------------
-      if(comparePhone(senderNumber)){
+      if(comparePhone(senderNumber.c_str())){
         doAction(senderNumber);
         //delete all sms
         sim800.println("AT+CMGD=1,4");
@@ -373,29 +374,25 @@ void sendStatus(String Phone){
  * readFromEEPROM function:
  * Store phone numbers in EEPROM
  ******************************************************************************/
-String readFromEEPROM(int addrOffset)
+void readFromEEPROM(int addrOffset, char outputPhoneNo[PHONE_NUM_LENGTH + 1])
 {
-  int len = 13;
-  char data[len + 1];
-  for (int i = 0; i < len; i++)
+  for (int i = 0; i < PHONE_NUM_LENGTH; i++)
   {
-    data[i] = EEPROM.read(addrOffset + i);
+    outputPhoneNo[i] = EEPROM.read(addrOffset + i);
   }
-  data[len] = '\0';
-  return String(data);
+  outputPhoneNo[PHONE_NUM_LENGTH] = '\0';
 }
 
 /*******************************************************************************
  * comparePhone function:
  * compare phone numbers stored in EEPROM
  ******************************************************************************/
-boolean comparePhone(String number)
+boolean comparePhone(const char *number)
 {
   boolean flag = 0;
   //--------------------------------------------------
-  for (int i = 0; i < totalPhoneNo; i++){
-    phoneNo[i] = readFromEEPROM(i * 13);
-    if(phoneNo[i].equals(number)){
+  for (int i = 0; i < TOTAL_PHONE_NUMS; i++){
+    if(strcmp(phoneNumbers[i], number) == 0){
       flag = 1;
       break;
     }
@@ -418,6 +415,6 @@ void resetGsm(){
   delay(1000);
   sim800.println("AT+CMGDA= \"DEL ALL\"");
   delay(1000);
-  Reply("Gsm reseted successfully", phoneNo[0]);
+  Reply("Gsm reseted successfully", phoneNumbers[0]);
   //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 }
