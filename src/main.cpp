@@ -55,8 +55,8 @@ void extractSmsCMGR(String buff);
 void doAction(String phoneNumber);
 void Reply(String text, String Phone);
 void sendStatus(String Phone);
-void readFromEEPROM(int addrOffset, char outputPhoneNo[PHONE_NUM_LENGTH + 1]);
-boolean comparePhone(const char *number);
+void readPhoneNumsFromEEPROM(int addrOffset, char outputPhoneNo[PHONE_NUM_LENGTH + 1]);
+boolean validatePhoneNo(const char *number);
 void resetGsm();
 // #### end of function prototypes ####
 
@@ -86,7 +86,7 @@ void setup() {
   //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
   Serial.println("List of Registered Phone Numbers");
   for (int i = 0; i < TOTAL_PHONE_NUMS; i++){
-    readFromEEPROM(i * 13, phoneNumbers[i]);
+    readPhoneNumsFromEEPROM(i * 13, phoneNumbers[i]);
     Serial.println(phoneNumbers[i]);
   }
   //MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
@@ -214,7 +214,7 @@ void parseData(String buff){
       else //if(cmd == "+CMGR")
         extractSmsCMGR(buff);
       //----------------------------------------------------------------------------
-      if(comparePhone(senderNumber.c_str())){
+      if(validatePhoneNo(senderNumber.c_str())){
         doAction(senderNumber);
         //delete all sms
         sim800.println("AT+CMGD=1,4");
@@ -371,10 +371,10 @@ void sendStatus(String Phone){
 }
 
 /*******************************************************************************
- * readFromEEPROM function:
+ * readPhoneNumsFromEEPROM function:
  * Store phone numbers in EEPROM
  ******************************************************************************/
-void readFromEEPROM(int addrOffset, char outputPhoneNo[PHONE_NUM_LENGTH + 1])
+void readPhoneNumsFromEEPROM(int addrOffset, char outputPhoneNo[PHONE_NUM_LENGTH + 1])
 {
   for (int i = 0; i < PHONE_NUM_LENGTH; i++)
   {
@@ -384,10 +384,10 @@ void readFromEEPROM(int addrOffset, char outputPhoneNo[PHONE_NUM_LENGTH + 1])
 }
 
 /*******************************************************************************
- * comparePhone function:
+ * validatePhoneNo function:
  * compare phone numbers stored in EEPROM
  ******************************************************************************/
-boolean comparePhone(const char *number)
+boolean validatePhoneNo(const char *number)
 {
   boolean flag = 0;
   //--------------------------------------------------
